@@ -1,6 +1,9 @@
 package web
 
-import "time"
+import (
+	"eaglebank/internal/users"
+	"time"
+)
 
 type Address struct {
 	Line1    string  `json:"line1" validate:"required"`
@@ -9,6 +12,35 @@ type Address struct {
 	Town     string  `json:"town" validate:"required"`
 	County   string  `json:"county" validate:"required"`
 	Postcode string  `json:"postcode" validate:"required"`
+}
+
+func (a Address) toDomain() (users.Address, error) {
+	var opts []users.AddressOption
+	if a.Line2 != nil {
+		opts = append(opts, users.WithLine2(*a.Line2))
+	}
+	if a.Line3 != nil {
+		opts = append(opts, users.WithLine3(*a.Line3))
+	}
+	return users.NewAddress(a.Line1, a.Town, a.County, a.Postcode, opts...)
+}
+
+func newAddressFromDomain(adr users.Address) Address {
+	a := Address{
+		Line1:    adr.Line1,
+		Town:     adr.Town,
+		County:   adr.County,
+		Postcode: adr.Postcode,
+	}
+	if adr.Line2 != "" {
+		line2 := adr.Line2
+		a.Line2 = &line2
+	}
+	if adr.Line3 != "" {
+		line3 := adr.Line3
+		a.Line3 = &line3
+	}
+	return a
 }
 
 type CreateBankAccountRequest struct {
@@ -64,6 +96,23 @@ type CreateUserRequest struct {
 	Email       string  `json:"email" validate:"required,email"`
 }
 
+func (r CreateUserRequest) toDomain() (users.CreateUserRequest, error) {
+	name := r.Name
+	address, err := r.Address.toDomain()
+	if err != nil {
+		return users.CreateUserRequest{}, err
+	}
+	number, err := users.NewPhoneNumber(r.PhoneNumber)
+	if err != nil {
+		return users.CreateUserRequest{}, err
+	}
+	email, err := users.NewEmail(r.Email)
+	if err != nil {
+		return users.CreateUserRequest{}, err
+	}
+	return users.NewCreateUserRequest(name, address, number, email)
+}
+
 type UpdateUserRequest struct {
 	Name        *string  `json:"name,omitempty"`
 	Address     *Address `json:"address,omitempty"`
@@ -79,6 +128,18 @@ type UserResponse struct {
 	Email            string    `json:"email" validate:"required,email"`
 	CreatedTimestamp time.Time `json:"createdTimestamp" validate:"required"`
 	UpdatedTimestamp time.Time `json:"updatedTimestamp" validate:"required"`
+}
+
+func newUserResponseFromDomain(user users.User) UserResponse {
+	return UserResponse{
+		ID:               user.ID.String(),
+		Name:             user.Name,
+		Address:          newAddressFromDomain(user.Address),
+		PhoneNumber:      user.PhoneNumber.String(),
+		Email:            user.Email.String(),
+		CreatedTimestamp: user.Created,
+		UpdatedTimestamp: user.Updated,
+	}
 }
 
 type ErrorResponse struct {

@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
@@ -11,9 +12,12 @@ import (
 	"eaglebank/internal/reqctx"
 )
 
-func NewServer(logger *slog.Logger) http.Handler {
+func NewServer(logger *slog.Logger, validate *validator.Validate, usrSvc UserService) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handleHealth)
+
+	// User routes
+	mux.HandleFunc("POST /v1/users", handleCreateUser(validate, usrSvc))
 
 	handler := panicMiddleware(logger)(mux)
 	handler = loggingMiddleware(logger)(handler)
