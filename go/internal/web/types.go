@@ -156,3 +156,12 @@ type BadRequestErrorResponse struct {
 	Message string             `json:"message" validate:"required"`
 	Details []ValidationDetail `json:"details" validate:"required"`
 }
+
+type LoginRequest struct {
+	UserID   string `json:"userID" validate:"required,regexp=^usr-[A-Za-z0-9]+$"`
+	Password string `json:"password" validate:"required"`
+}
+
+type LoginResponse struct {
+	Token string `json:"token" validate:"required"`
+}

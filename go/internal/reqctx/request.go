@@ -13,3 +13,13 @@ func GetRequestID(ctx context.Context) string {
 	}
 	return requestID
 }
+
+const UserIDKey contextKey = "userID"
+
+func GetUserID(ctx context.Context) string {
+	userID := ""
+	if id, ok := ctx.Value(UserIDKey).(string); ok && id != "" {
+		userID = id
+	}
+	return userID
+}

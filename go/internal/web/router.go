@@ -2,11 +2,15 @@ package web
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"eaglebank/internal/reqctx"
@@ -14,9 +18,10 @@ import (
 
 func NewServer(logger *slog.Logger, validate *validator.Validate, usrSvc UserService) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handleHealth)
 
-	// User routes
+	// unprotected routes
+	mux.HandleFunc("/health", handleHealth())
+	mux.HandleFunc("POST /login", handleLogin(validate))
 	mux.HandleFunc("POST /v1/users", handleCreateUser(validate, usrSvc))
 
 	handler := panicMiddleware(logger)(mux)
@@ -110,5 +115,51 @@ func panicMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+func authMiddleware(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode("authorization header required")
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode("invalid authorization header format")
+			return
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method")
+			}
+			return secretKey, nil
+		})
+		if err != nil || !token.Valid {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode("invalid token")
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode("invalid token claims")
+			return
+		}
+		userID, ok := claims["sub"].(string)
+		if !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode("missing userID in token")
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), reqctx.UserIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
