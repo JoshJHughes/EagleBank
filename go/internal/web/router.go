@@ -12,8 +12,6 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
-
-	"eaglebank/internal/reqctx"
 )
 
 func NewServer(logger *slog.Logger, validate *validator.Validate, usrSvc UserService) http.Handler {
@@ -53,7 +51,7 @@ func loggingMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			requestID := uuid.NewString()
 
-			ctx := context.WithValue(r.Context(), reqctx.RequestIDKey, requestID)
+			ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
 			r = r.WithContext(ctx)
 
 			rw := &responseWriter{
@@ -96,7 +94,7 @@ func panicMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if err := recover(); err != nil {
-					requestID := reqctx.GetRequestID(r.Context())
+					requestID := GetRequestID(r.Context())
 
 					logger.Error("panic recovered",
 						slog.String("request_id", requestID),
@@ -159,7 +157,7 @@ func authMiddleware(next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), reqctx.UserIDKey, userID)
+		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
