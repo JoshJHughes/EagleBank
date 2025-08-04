@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
 	"log/slog"
@@ -14,13 +13,13 @@ import (
 	"time"
 )
 
-func NewServer(logger *slog.Logger, validate *validator.Validate, usrSvc UserService) http.Handler {
+func NewServer(logger *slog.Logger, usrSvc UserService) http.Handler {
 	mux := http.NewServeMux()
 
 	// unprotected routes
 	mux.HandleFunc("/health", handleHealth())
-	mux.HandleFunc("POST /login", handleLogin(validate))
-	mux.HandleFunc("POST /v1/users", handleCreateUser(validate, usrSvc))
+	mux.HandleFunc("POST /login", handleLogin())
+	mux.HandleFunc("POST /v1/users", handleCreateUser(usrSvc))
 
 	handler := panicMiddleware(logger)(mux)
 	handler = loggingMiddleware(logger)(handler)

@@ -21,7 +21,6 @@ func TestUserID(t *testing.T) {
 		t.Run("should error on empty string", func(t *testing.T) {
 			_, err := NewUserID("")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "user ID cannot be empty")
 		})
 
 		t.Run("should error on invalid format", func(t *testing.T) {
@@ -36,7 +35,6 @@ func TestUserID(t *testing.T) {
 				t.Run(invalidID, func(t *testing.T) {
 					_, err := NewUserID(invalidID)
 					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "invalid user ID format")
 				})
 			}
 		})
@@ -103,7 +101,6 @@ func TestEmail(t *testing.T) {
 		t.Run("should error on empty string", func(t *testing.T) {
 			_, err := NewEmail("")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "email cannot be empty")
 		})
 
 		t.Run("should error on invalid format", func(t *testing.T) {
@@ -118,7 +115,6 @@ func TestEmail(t *testing.T) {
 				t.Run(invalidEmail, func(t *testing.T) {
 					_, err := NewEmail(invalidEmail)
 					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "invalid email format")
 				})
 			}
 		})
@@ -160,7 +156,6 @@ func TestPhoneNumber(t *testing.T) {
 		t.Run("should error on empty string", func(t *testing.T) {
 			_, err := NewPhoneNumber("")
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "phone number cannot be empty")
 		})
 
 		t.Run("should error on invalid format", func(t *testing.T) {
@@ -177,7 +172,6 @@ func TestPhoneNumber(t *testing.T) {
 				t.Run(invalidNumber, func(t *testing.T) {
 					_, err := NewPhoneNumber(invalidNumber)
 					assert.Error(t, err)
-					assert.Contains(t, err.Error(), "invalid phone number format")
 				})
 			}
 		})
@@ -246,19 +240,17 @@ func TestAddress(t *testing.T) {
 				town     string
 				county   string
 				postcode string
-				errorMsg string
 			}{
-				{"empty line1", "", validTown, validCounty, validPostcode, "address line 1 is required"},
-				{"empty town", validLine1, "", validCounty, validPostcode, "town is required"},
-				{"empty county", validLine1, validTown, "", validPostcode, "county is required"},
-				{"empty postcode", validLine1, validTown, validCounty, "", "postcode is required"},
+				{"empty line1", "", validTown, validCounty, validPostcode},
+				{"empty town", validLine1, "", validCounty, validPostcode},
+				{"empty county", validLine1, validTown, "", validPostcode},
+				{"empty postcode", validLine1, validTown, validCounty, ""},
 			}
 
 			for _, tc := range testCases {
 				t.Run(tc.name, func(t *testing.T) {
 					_, err := NewAddress(tc.line1, tc.town, tc.county, tc.postcode)
 					assert.Error(t, err)
-					assert.Contains(t, err.Error(), tc.errorMsg)
 				})
 			}
 		})
@@ -337,7 +329,6 @@ func TestUser(t *testing.T) {
 
 			_, err := NewUser(id, "", addr, phone, email)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "name is required")
 		})
 	})
 

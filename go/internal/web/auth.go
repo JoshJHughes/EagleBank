@@ -1,8 +1,8 @@
 package web
 
 import (
+	"eaglebank/internal/validation"
 	"encoding/json"
-	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt"
 	"net/http"
 	"time"
@@ -14,7 +14,7 @@ func verifyCredentials(_, _ string) bool {
 	return true
 }
 
-func handleLogin(validate *validator.Validate) http.HandlerFunc {
+func handleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -23,7 +23,7 @@ func handleLogin(validate *validator.Validate) http.HandlerFunc {
 			return
 		}
 
-		err := validate.Struct(req)
+		err := validation.Get().Struct(req)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(err.Error())

@@ -54,7 +54,7 @@ type UpdateBankAccountRequest struct {
 }
 
 type BankAccountResponse struct {
-	AccountNumber    string    `json:"accountNumber" validate:"required,regexp=^01\\d{6}$"`
+	AccountNumber    string    `json:"accountNumber" validate:"required,acctNum"`
 	SortCode         string    `json:"sortCode" validate:"required,eq=10-10-10"`
 	Name             string    `json:"name" validate:"required"`
 	AccountType      string    `json:"accountType" validate:"required,oneof=personal"`
@@ -76,12 +76,12 @@ type CreateTransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	ID               string    `json:"id" validate:"required,regexp=^tan-[A-Za-z0-9]$"`
+	ID               string    `json:"id" validate:"required,tanID"`
 	Amount           float64   `json:"amount" validate:"required,min=0,max=10000"`
 	Currency         string    `json:"currency" validate:"required,oneof=GBP"`
 	Type             string    `json:"type" validate:"required,oneof=deposit withdrawal"`
 	Reference        *string   `json:"reference,omitempty"`
-	UserID           *string   `json:"userId,omitempty" validate:"omitempty,regexp=^usr-[A-Za-z0-9]+$"`
+	UserID           *string   `json:"userId,omitempty" validate:"omitempty,userID"`
 	CreatedTimestamp time.Time `json:"createdTimestamp" validate:"required"`
 }
 
@@ -92,7 +92,7 @@ type ListTransactionsResponse struct {
 type CreateUserRequest struct {
 	Name        string  `json:"name" validate:"required"`
 	Address     Address `json:"address" validate:"required"`
-	PhoneNumber string  `json:"phoneNumber" validate:"required,e164"`
+	PhoneNumber string  `json:"phoneNumber" validate:"required,phone"`
 	Email       string  `json:"email" validate:"required,email"`
 }
 
@@ -116,15 +116,15 @@ func (r CreateUserRequest) toDomain() (users.CreateUserRequest, error) {
 type UpdateUserRequest struct {
 	Name        *string  `json:"name,omitempty"`
 	Address     *Address `json:"address,omitempty"`
-	PhoneNumber *string  `json:"phoneNumber,omitempty" validate:"omitempty,e164"`
+	PhoneNumber *string  `json:"phoneNumber,omitempty" validate:"omitempty,phone"`
 	Email       *string  `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type UserResponse struct {
-	ID               string    `json:"id" validate:"required,regexp=^usr-[A-Za-z0-9]+$"`
+	ID               string    `json:"id" validate:"required,userID"`
 	Name             string    `json:"name" validate:"required"`
 	Address          Address   `json:"address" validate:"required"`
-	PhoneNumber      string    `json:"phoneNumber" validate:"required,e164"`
+	PhoneNumber      string    `json:"phoneNumber" validate:"required,phone"`
 	Email            string    `json:"email" validate:"required,email"`
 	CreatedTimestamp time.Time `json:"createdTimestamp" validate:"required"`
 	UpdatedTimestamp time.Time `json:"updatedTimestamp" validate:"required"`
@@ -158,7 +158,7 @@ type BadRequestErrorResponse struct {
 }
 
 type LoginRequest struct {
-	UserID       string `json:"userID" validate:"required,regexp=^usr-[A-Za-z0-9]+$"`
+	UserID       string `json:"userID" validate:"required,userID"`
 	PasswordHash string `json:"passwordhash" validate:"required"`
 }
 

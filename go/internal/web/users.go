@@ -1,12 +1,12 @@
 package web
 
 import (
+	"eaglebank/internal/validation"
 	"encoding/json"
-	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
-func handleCreateUser(validate *validator.Validate, usrSvc UserService) http.HandlerFunc {
+func handleCreateUser(usrSvc UserService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateUserRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -15,7 +15,7 @@ func handleCreateUser(validate *validator.Validate, usrSvc UserService) http.Han
 			return
 		}
 
-		err := validate.Struct(req)
+		err := validation.Get().Struct(req)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(err.Error())

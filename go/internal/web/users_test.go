@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"eaglebank/internal/users"
 	"eaglebank/internal/users/adapters"
-	"eaglebank/internal/validation"
 	"encoding/json"
 	"errors"
 	"github.com/stretchr/testify/assert"
@@ -19,12 +18,11 @@ import (
 
 func TestUsers(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	validate := validation.MustNewValidator()
 
 	usrStore := adapters.NewInMemoryUserStore()
 	usrSvc := users.NewUserService(usrStore)
 
-	srv := NewServer(logger, validate, usrSvc)
+	srv := NewServer(logger, usrSvc)
 	t.Run("POST to /v1/users", func(t *testing.T) {
 		t.Run("with all required data should create user", func(t *testing.T) {
 			reqObj := CreateUserRequest{
@@ -81,7 +79,7 @@ func TestUsers(t *testing.T) {
 		})
 		t.Run("unexpected error should return internal server error", func(t *testing.T) {
 			errUsrSvc := NewErroringUserService(t)
-			errSrv := NewServer(logger, validate, errUsrSvc)
+			errSrv := NewServer(logger, errUsrSvc)
 			reqObj := CreateUserRequest{
 				Name: "Mr Foo",
 				Address: Address{

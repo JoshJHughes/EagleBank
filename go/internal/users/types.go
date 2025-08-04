@@ -1,25 +1,19 @@
 package users
 
 import (
-	"errors"
+	"eaglebank/internal/validation"
 	"fmt"
 	"github.com/google/uuid"
-	"net/mail"
-	"regexp"
 	"strings"
 	"time"
 )
 
 type UserID string
 
-var userIDRegex = regexp.MustCompile(`^usr-[A-Za-z0-9]+$`)
-
 func NewUserID(s string) (UserID, error) {
-	if s == "" {
-		return "", fmt.Errorf("user ID cannot be empty")
-	}
-	if !userIDRegex.MatchString(s) {
-		return "", fmt.Errorf("invalid user ID format: %q, must match pattern %q", s, userIDRegex.String())
+	err := validation.Get().Var(s, "required,userID")
+	if err != nil {
+		return "", fmt.Errorf("invalid userID %q", s)
 	}
 	return UserID(s), nil
 }
@@ -53,15 +47,10 @@ func (u UserID) String() string {
 type Email string
 
 func NewEmail(s string) (Email, error) {
-	if s == "" {
-		return "", errors.New("email cannot be empty")
-	}
-
-	_, err := mail.ParseAddress(s)
+	err := validation.Get().Var(s, "required,email")
 	if err != nil {
-		return "", fmt.Errorf("invalid email format: %q", s)
+		return "", fmt.Errorf("invalid email %q", s)
 	}
-
 	return Email(s), nil
 }
 
@@ -79,14 +68,10 @@ func (e Email) String() string {
 
 type PhoneNumber string
 
-var phoneNumberRegex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
-
 func NewPhoneNumber(s string) (PhoneNumber, error) {
-	if s == "" {
-		return "", fmt.Errorf("phone number cannot be empty")
-	}
-	if !phoneNumberRegex.MatchString(s) {
-		return "", fmt.Errorf("invalid phone number format: %q, must match pattern %q", s, phoneNumberRegex.String())
+	err := validation.Get().Var(s, "required,phone")
+	if err != nil {
+		return "", fmt.Errorf("invalid phone number %q", s)
 	}
 	return PhoneNumber(s), nil
 }
@@ -104,14 +89,12 @@ func (n PhoneNumber) String() string {
 }
 
 type Address struct {
-	Line1    string
-	Town     string
-	County   string
-	Postcode string
-
-	// optional
-	Line2 string
-	Line3 string
+	Line1    string `validate:"required"`
+	Line2    string
+	Line3    string
+	Town     string `validate:"required"`
+	County   string `validate:"required"`
+	Postcode string `validate:"required"`
 }
 
 type AddressOption func(*Address)
@@ -129,30 +112,19 @@ func WithLine3(line3 string) AddressOption {
 }
 
 func NewAddress(line1, town, county, postcode string, opts ...AddressOption) (Address, error) {
-	if line1 == "" {
-		return Address{}, errors.New("address line 1 is required")
-	}
-	if town == "" {
-		return Address{}, errors.New("town is required")
-	}
-	if county == "" {
-		return Address{}, errors.New("county is required")
-	}
-	if postcode == "" {
-		return Address{}, errors.New("postcode is required")
-	}
-
 	addr := Address{
 		Line1:    line1,
 		Town:     town,
 		County:   county,
 		Postcode: postcode,
 	}
-
 	for _, opt := range opts {
 		opt(&addr)
 	}
-
+	err := validation.Get().Struct(addr)
+	if err != nil {
+		return Address{}, fmt.Errorf("invalid address: %q", addr)
+	}
 	return addr, nil
 }
 
@@ -165,29 +137,31 @@ func MustNewAddress(line1, town, county, postcode string, opts ...AddressOption)
 }
 
 type User struct {
-	ID          UserID
-	Name        string
-	Address     Address
-	PhoneNumber PhoneNumber
-	Email       Email
-	Created     time.Time
-	Updated     time.Time
+	ID          UserID      `validate:"required,userID"`
+	Name        string      `validate:"required"`
+	Address     Address     `validate:"required"`
+	PhoneNumber PhoneNumber `validate:"required,phone"`
+	Email       Email       `validate:"required,email"`
+	Created     time.Time   `validate:"required"`
+	Updated     time.Time   `validate:"required"`
 }
 
 func NewUser(id UserID, name string, address Address, phone PhoneNumber, email Email) (User, error) {
-	if name == "" {
-		return User{}, errors.New("name is required")
-	}
-
-	return User{
+	now := time.Now()
+	usr := User{
 		ID:          id,
 		Name:        name,
 		Address:     address,
 		PhoneNumber: phone,
 		Email:       email,
-		Created:     time.Now(),
-		Updated:     time.Now(),
-	}, nil
+		Created:     now,
+		Updated:     now,
+	}
+	err := validation.Get().Struct(usr)
+	if err != nil {
+		return User{}, fmt.Errorf("invalid user: %q", usr)
+	}
+	return usr, nil
 }
 
 func MustNewUser(id UserID, name string, address Address, phone PhoneNumber, email Email) User {
@@ -199,23 +173,24 @@ func MustNewUser(id UserID, name string, address Address, phone PhoneNumber, ema
 }
 
 type CreateUserRequest struct {
-	Name        string
-	Address     Address
-	PhoneNumber PhoneNumber
-	Email       Email
+	Name        string      `validate:"required"`
+	Address     Address     `validate:"required"`
+	PhoneNumber PhoneNumber `validate:"required,phone"`
+	Email       Email       `validate:"required,email"`
 }
 
 func NewCreateUserRequest(name string, address Address, number PhoneNumber, email Email) (CreateUserRequest, error) {
-	if name == "" {
-		return CreateUserRequest{}, errors.New("name is required")
-	}
-
-	return CreateUserRequest{
+	req := CreateUserRequest{
 		Name:        name,
 		Address:     address,
 		PhoneNumber: number,
 		Email:       email,
-	}, nil
+	}
+	err := validation.Get().Struct(req)
+	if err != nil {
+		return CreateUserRequest{}, fmt.Errorf("invalid CreateUserRequest %+v", req)
+	}
+	return req, nil
 }
 
 func MustNewCreateUserRequest(name string, address Address, number PhoneNumber, email Email) CreateUserRequest {
