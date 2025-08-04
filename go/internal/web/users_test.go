@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"eaglebank/internal/users"
 	"eaglebank/internal/users/adapters"
+	"eaglebank/internal/validation"
 	"encoding/json"
 	"errors"
-	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"log/slog"
@@ -19,7 +19,7 @@ import (
 
 func TestUsers(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	validate := validator.New(validator.WithRequiredStructEnabled())
+	validate := validation.MustNewValidator()
 
 	usrStore := adapters.NewInMemoryUserStore()
 	usrSvc := users.NewUserService(usrStore)

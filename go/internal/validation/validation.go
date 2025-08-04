@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"fmt"
 	"github.com/go-playground/validator/v10"
 	"regexp"
 )
@@ -23,4 +24,12 @@ func NewValidator() (*validator.Validate, error) {
 		return nil, err
 	}
 	return validate, nil
+}
+
+func MustNewValidator() *validator.Validate {
+	validate, err := NewValidator()
+	if err != nil {
+		panic(fmt.Sprintf("MustNewValidator: %v", err))
+	}
+	return validate
 }
