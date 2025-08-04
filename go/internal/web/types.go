@@ -158,8 +158,8 @@ type BadRequestErrorResponse struct {
 }
 
 type LoginRequest struct {
-	UserID   string `json:"userID" validate:"required,regexp=^usr-[A-Za-z0-9]+$"`
-	Password string `json:"password" validate:"required"`
+	UserID       string `json:"userID" validate:"required,regexp=^usr-[A-Za-z0-9]+$"`
+	PasswordHash string `json:"passwordhash" validate:"required"`
 }
 
 type LoginResponse struct {

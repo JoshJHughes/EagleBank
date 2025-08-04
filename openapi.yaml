@@ -11,7 +11,35 @@ tags:
     description: Manage transactions on a bank account
   - name: user
     description: Manage a user
+  - name: login
+    description: Login a user
 paths:
+  /login:
+    post:
+      tags:
+        - login
+      description: Login
+      operationId: login
+      requestBody:
+        description: Login
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: User has been logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid details supplied
+        '401':
+          description: Invalid credentials supplied
+        '500':
+          description: An unexpected error occurred
   /v1/accounts:
     post:
       tags:
@@ -927,6 +955,26 @@ components:
                 type: string
               type:
                 type: string
+    LoginRequest:
+      type: object
+      required:
+        - userID
+        - passwordhash
+      properties:
+        userID:
+          type: string
+          format: ^usr-[A-Za-z0-9]+$
+          examples:
+            - "usr-123"
+        passwordhash:
+          type: string
+    LoginResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
   securitySchemes:
     bearerAuth:
       type: http

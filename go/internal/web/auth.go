@@ -30,7 +30,7 @@ func handleLogin(validate *validator.Validate) http.HandlerFunc {
 			return
 		}
 
-		if !verifyCredentials(req.UserID, req.Password) {
+		if !verifyCredentials(req.UserID, req.PasswordHash) {
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode("unauthorized")
 			return
