@@ -16,7 +16,7 @@ func GetRequestID(ctx context.Context) string {
 
 const UserIDKey contextKey = "userID"
 
-func GetUserID(ctx context.Context) string {
+func GetAuthenticatedUserID(ctx context.Context) string {
 	userID := ""
 	if id, ok := ctx.Value(UserIDKey).(string); ok && id != "" {
 		userID = id

@@ -2,7 +2,7 @@ package web
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"github.com/google/uuid"
@@ -20,6 +20,9 @@ func NewServer(logger *slog.Logger, usrSvc UserService) http.Handler {
 	mux.HandleFunc("/health", handleHealth())
 	mux.HandleFunc("POST /login", handleLogin())
 	mux.HandleFunc("POST /v1/users", handleCreateUser(usrSvc))
+
+	// protected routes
+	mux.HandleFunc("GET /v1/users/{userId}", authMiddleware(handleGetUser(usrSvc)))
 
 	handler := panicMiddleware(logger)(mux)
 	handler = loggingMiddleware(logger)(handler)
@@ -119,15 +122,13 @@ func authMiddleware(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("authorization header required")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("authorization header required"))
 			return
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("invalid authorization header format")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("invalid authorization header format"))
 			return
 		}
 
@@ -138,21 +139,18 @@ func authMiddleware(next http.Handler) http.HandlerFunc {
 			return secretKey, nil
 		})
 		if err != nil || !token.Valid {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("invalid token")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("invalid token"))
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("invalid token claims")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("invalid token claims"))
 			return
 		}
 		userID, ok := claims["sub"].(string)
 		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("missing userID in token")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("missing userID in token"))
 			return
 		}
 

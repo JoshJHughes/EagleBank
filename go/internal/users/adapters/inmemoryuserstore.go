@@ -2,7 +2,6 @@ package adapters
 
 import (
 	"eaglebank/internal/users"
-	"fmt"
 )
 
 type InMemoryUserStore struct {
@@ -16,7 +15,7 @@ func NewInMemoryUserStore() InMemoryUserStore {
 func (s InMemoryUserStore) Get(id users.UserID) (users.User, error) {
 	user, ok := s.store[id]
 	if !ok {
-		return users.User{}, fmt.Errorf("error fetching user %v, does not exist in store", id)
+		return users.User{}, users.ErrUserNotFound
 	}
 	return user, nil
 }

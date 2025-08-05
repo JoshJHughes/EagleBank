@@ -1,5 +1,7 @@
 package users
 
+import "fmt"
+
 type UserStore interface {
 	Get(id UserID) (User, error)
 	Put(user User) error
@@ -30,4 +32,12 @@ func (svc UserService) CreateUser(req CreateUserRequest) (User, error) {
 		return User{}, err
 	}
 	return usr, nil
+}
+
+func (svc UserService) GetUser(userID UserID) (User, error) {
+	user, err := svc.userStore.Get(userID)
+	if err != nil {
+		return User{}, fmt.Errorf("error fetching user %q: %w", userID, err)
+	}
+	return user, nil
 }
