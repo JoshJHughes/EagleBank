@@ -136,6 +136,10 @@ func (ba *BankAccount) IsValid() bool {
 	return true
 }
 
+func (ba *BankAccount) Balance() float64 {
+	return ba.balance
+}
+
 func (ba *BankAccount) Withdraw(amt float64) error {
 	newBalance := ba.balance - amt
 	if newBalance < balanceMin {

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"eaglebank/internal/accounts"
 	"eaglebank/internal/users"
 	"eaglebank/internal/validation"
 	"errors"
@@ -65,6 +66,19 @@ type BankAccountResponse struct {
 	Currency         string    `json:"currency" validate:"required,oneof=GBP"`
 	CreatedTimestamp time.Time `json:"createdTimestamp" validate:"required"`
 	UpdatedTimestamp time.Time `json:"updatedTimestamp" validate:"required"`
+}
+
+func newBankAccountResponseFromDomain(acct accounts.BankAccount) BankAccountResponse {
+	return BankAccountResponse{
+		AccountNumber:    acct.AccountNumber.String(),
+		SortCode:         acct.SortCode.String(),
+		Name:             acct.Name,
+		AccountType:      acct.AccountType.String(),
+		Balance:          acct.Balance(),
+		Currency:         acct.Currency.String(),
+		CreatedTimestamp: acct.CreatedTimestamp,
+		UpdatedTimestamp: acct.UpdatedTimestamp,
+	}
 }
 
 type ListBankAccountsResponse struct {

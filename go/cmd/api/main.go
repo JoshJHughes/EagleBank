@@ -1,6 +1,8 @@
 package main
 
 import (
+	"eaglebank/internal/accounts"
+	adapters2 "eaglebank/internal/accounts/adapters"
 	"eaglebank/internal/users"
 	"eaglebank/internal/users/adapters"
 	"eaglebank/internal/web"
@@ -17,7 +19,14 @@ func main() {
 	usrStore := adapters.NewInMemoryUserStore()
 	usrSvc := users.NewUserService(usrStore)
 
-	srv := web.NewServer(logger, usrSvc)
+	acctStore := adapters2.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+
+	srv := web.NewServer(web.ServerArgs{
+		Logger:  logger,
+		UserSvc: usrSvc,
+		AcctSvc: acctSvc,
+	})
 
 	port := "8080"
 	logger.Info("Starting Eagle Bank api, serving on :" + port)

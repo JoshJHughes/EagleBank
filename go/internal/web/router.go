@@ -13,19 +13,27 @@ import (
 	"time"
 )
 
-func NewServer(logger *slog.Logger, usrSvc UserService) http.Handler {
+type ServerArgs struct {
+	Logger  *slog.Logger
+	UserSvc UserService
+	AcctSvc AccountService
+}
+
+func NewServer(args ServerArgs) http.Handler {
 	mux := http.NewServeMux()
 
 	// unprotected routes
 	mux.HandleFunc("/health", handleHealth())
 	mux.HandleFunc("POST /login", handleLogin())
-	mux.HandleFunc("POST /v1/users", handleCreateUser(usrSvc))
+	mux.HandleFunc("POST /v1/users", handleCreateUser(args.UserSvc))
 
 	// protected routes
-	mux.HandleFunc("GET /v1/users/{userId}", authMiddleware(handleGetUser(usrSvc)))
+	mux.HandleFunc("GET /v1/users/{userId}", authMiddleware(handleGetUser(args.UserSvc)))
 
-	handler := panicMiddleware(logger)(mux)
-	handler = loggingMiddleware(logger)(handler)
+	mux.HandleFunc("POST /v1/accounts/", authMiddleware(handleCreateAccount(args.AcctSvc)))
+
+	handler := panicMiddleware(args.Logger)(mux)
+	handler = loggingMiddleware(args.Logger)(handler)
 
 	return handler
 }

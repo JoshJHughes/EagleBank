@@ -22,7 +22,7 @@ func TestUsers(t *testing.T) {
 	usrStore := adapters.NewInMemoryUserStore()
 	usrSvc := users.NewUserService(usrStore)
 
-	srv := NewServer(logger, usrSvc)
+	srv := NewServer(ServerArgs{Logger: logger, UserSvc: usrSvc})
 	t.Run("POST to /v1/users", func(t *testing.T) {
 		t.Run("with all required data should create user", func(t *testing.T) {
 			rr := httptest.NewRecorder()
@@ -60,7 +60,7 @@ func TestUsers(t *testing.T) {
 		})
 		t.Run("unexpected error should return internal server error", func(t *testing.T) {
 			errUsrSvc := NewErroringUserService(t)
-			errSrv := NewServer(logger, errUsrSvc)
+			errSrv := NewServer(ServerArgs{Logger: logger, UserSvc: errUsrSvc})
 
 			rr := httptest.NewRecorder()
 			reqObj := validUserRequest
@@ -151,7 +151,7 @@ func TestUsers(t *testing.T) {
 			req = getUserReq(t, user.ID, token)
 
 			errUsrSvc := NewErroringUserService(t)
-			errSrv := NewServer(logger, errUsrSvc)
+			errSrv := NewServer(ServerArgs{Logger: logger, UserSvc: errUsrSvc})
 			errSrv.ServeHTTP(rr, req)
 
 			var resp ErrorResponse
