@@ -169,3 +169,29 @@ func NewBankAccount(acctNum AccountNumber, sortCode SortCode, name string, acctT
 	}
 	return &acct, nil
 }
+
+type CreateAccountRequest struct {
+	Name        string
+	AccountType AccountType
+}
+
+func (r CreateAccountRequest) IsValid() bool {
+	if r.Name == "" {
+		return false
+	}
+	if !r.AccountType.IsValid() {
+		return false
+	}
+	return true
+}
+
+func NewCreateAccountRequest(name string, acctType AccountType) (CreateAccountRequest, error) {
+	req := CreateAccountRequest{
+		Name:        name,
+		AccountType: acctType,
+	}
+	if !req.IsValid() {
+		return CreateAccountRequest{}, fmt.Errorf("invalid create account request %+v", req)
+	}
+	return req, nil
+}
