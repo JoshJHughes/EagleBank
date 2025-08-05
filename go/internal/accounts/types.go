@@ -3,6 +3,7 @@ package accounts
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"regexp"
 	"time"
 )
@@ -50,6 +51,10 @@ func NewAccountNumber(s string) (AccountNumber, error) {
 		return "", fmt.Errorf("invalid account number %q: must match format 01XXXXXX", s)
 	}
 	return acct, nil
+}
+
+func NewRandAccountNumber() (AccountNumber, error) {
+	return NewAccountNumber(fmt.Sprintf("01%06d", rand.IntN(1000000)))
 }
 
 type SortCode string
