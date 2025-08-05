@@ -72,7 +72,7 @@ func TestUsers(t *testing.T) {
 
 			assert.Equal(t, http.StatusBadRequest, rr.Code)
 
-			var errResp string
+			var errResp BadRequestErrorResponse
 			err = json.NewDecoder(rr.Body).Decode(&errResp)
 			require.NoError(t, err)
 			assert.NotEmpty(t, errResp)

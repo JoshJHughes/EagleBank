@@ -2,6 +2,9 @@ package web
 
 import (
 	"eaglebank/internal/users"
+	"eaglebank/internal/validation"
+	"errors"
+	"github.com/go-playground/validator/v10"
 	"time"
 )
 
@@ -146,6 +149,15 @@ type ErrorResponse struct {
 	Message string `json:"message" validate:"required"`
 }
 
+func newErrorResponse(err error) ErrorResponse {
+	resp := ErrorResponse{Message: err.Error()}
+	err = validation.Get().Struct(resp)
+	if err != nil {
+		resp.Message = "unspecified error"
+	}
+	return resp
+}
+
 type ValidationDetail struct {
 	Field   string `json:"field" validate:"required"`
 	Message string `json:"message" validate:"required"`
@@ -155,6 +167,40 @@ type ValidationDetail struct {
 type BadRequestErrorResponse struct {
 	Message string             `json:"message" validate:"required"`
 	Details []ValidationDetail `json:"details" validate:"required"`
+}
+
+func newBadRequestErrorResponse(err error) BadRequestErrorResponse {
+	var details []ValidationDetail
+	var validateErrs validator.ValidationErrors
+	if errors.As(err, &validateErrs) {
+		for _, e := range validateErrs {
+			details = append(details, ValidationDetail{
+				Field:   e.Field(),
+				Message: e.Error(),
+				Type:    e.Type().String(),
+			})
+		}
+	}
+	resp := BadRequestErrorResponse{
+		Message: err.Error(),
+		Details: details,
+	}
+	err = validation.Get().Struct(resp)
+	if err != nil {
+		if resp.Message == "" {
+			resp.Message = "validation error"
+		}
+		if resp.Details == nil {
+			resp.Details = []ValidationDetail{
+				{
+					Field:   "unknown",
+					Message: "unknown",
+					Type:    "unknown",
+				},
+			}
+		}
+	}
+	return resp
 }
 
 type LoginRequest struct {

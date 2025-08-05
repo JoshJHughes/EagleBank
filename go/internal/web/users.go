@@ -10,28 +10,24 @@ func handleCreateUser(usrSvc UserService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req CreateUserRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			writeErrorResponse(w, http.StatusBadRequest, err)
 			return
 		}
 
 		err := validation.Get().Struct(req)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			writeBadRequestErrorResponse(w, err)
 			return
 		}
 
 		usrReq, err := req.toDomain()
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			writeBadRequestErrorResponse(w, err)
 			return
 		}
 		usr, err := usrSvc.CreateUser(usrReq)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(ErrorResponse{Message: err.Error()})
+			writeErrorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
 

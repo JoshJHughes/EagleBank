@@ -3,6 +3,7 @@ package web
 import (
 	"eaglebank/internal/validation"
 	"encoding/json"
+	"errors"
 	"github.com/golang-jwt/jwt"
 	"net/http"
 	"time"
@@ -18,21 +19,18 @@ func handleLogin() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req LoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			writeErrorResponse(w, http.StatusBadRequest, err)
 			return
 		}
 
 		err := validation.Get().Struct(req)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(err.Error())
+			writeBadRequestErrorResponse(w, err)
 			return
 		}
 
 		if !verifyCredentials(req.UserID, req.PasswordHash) {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode("unauthorized")
+			writeErrorResponse(w, http.StatusUnauthorized, errors.New("unauthorized"))
 			return
 		}
 
@@ -45,8 +43,7 @@ func handleLogin() http.HandlerFunc {
 
 		tokenString, err := token.SignedString(secretKey)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode("login error")
+			writeErrorResponse(w, http.StatusInternalServerError, errors.New("authorization error"))
 			return
 		}
 

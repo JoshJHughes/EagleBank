@@ -13,7 +13,7 @@ type UserID string
 func NewUserID(s string) (UserID, error) {
 	err := validation.Get().Var(s, "required,userID")
 	if err != nil {
-		return "", fmt.Errorf("invalid userID %q", s)
+		return "", err
 	}
 	return UserID(s), nil
 }
@@ -49,7 +49,7 @@ type Email string
 func NewEmail(s string) (Email, error) {
 	err := validation.Get().Var(s, "required,email")
 	if err != nil {
-		return "", fmt.Errorf("invalid email %q", s)
+		return "", err
 	}
 	return Email(s), nil
 }
@@ -71,7 +71,7 @@ type PhoneNumber string
 func NewPhoneNumber(s string) (PhoneNumber, error) {
 	err := validation.Get().Var(s, "required,phone")
 	if err != nil {
-		return "", fmt.Errorf("invalid phone number %q", s)
+		return "", err
 	}
 	return PhoneNumber(s), nil
 }
@@ -123,7 +123,7 @@ func NewAddress(line1, town, county, postcode string, opts ...AddressOption) (Ad
 	}
 	err := validation.Get().Struct(addr)
 	if err != nil {
-		return Address{}, fmt.Errorf("invalid address: %q", addr)
+		return Address{}, err
 	}
 	return addr, nil
 }
@@ -159,7 +159,7 @@ func NewUser(id UserID, name string, address Address, phone PhoneNumber, email E
 	}
 	err := validation.Get().Struct(usr)
 	if err != nil {
-		return User{}, fmt.Errorf("invalid user: %q", usr)
+		return User{}, err
 	}
 	return usr, nil
 }
@@ -188,7 +188,7 @@ func NewCreateUserRequest(name string, address Address, number PhoneNumber, emai
 	}
 	err := validation.Get().Struct(req)
 	if err != nil {
-		return CreateUserRequest{}, fmt.Errorf("invalid CreateUserRequest %+v", req)
+		return CreateUserRequest{}, err
 	}
 	return req, nil
 }
