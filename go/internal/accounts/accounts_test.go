@@ -12,10 +12,9 @@ import (
 )
 
 func TestAccountService(t *testing.T) {
-	store := adapters.NewInMemoryAccountStore()
-	svc := accounts.NewAccountService(store)
-
 	t.Run("create account", func(t *testing.T) {
+		store := adapters.NewInMemoryAccountStore()
+		svc := accounts.NewAccountService(store)
 		t.Run("should successfully create account", func(t *testing.T) {
 			req := accounts.CreateAccountRequest{
 				UserID:      "usr-123",
@@ -51,6 +50,9 @@ func TestAccountService(t *testing.T) {
 		})
 	})
 	t.Run("list accounts", func(t *testing.T) {
+		store := adapters.NewInMemoryAccountStore()
+		svc := accounts.NewAccountService(store)
+
 		userID := users.MustNewUserID("usr-123")
 		acct1, err := svc.CreateAccount(accounts.CreateAccountRequest{
 			UserID:      userID,
