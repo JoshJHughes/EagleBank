@@ -3,12 +3,24 @@ package users
 import (
 	"eaglebank/internal/validation"
 	"fmt"
-	"github.com/google/uuid"
+	"regexp"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserID string
+
+var userIDRegex = regexp.MustCompile(`^usr-[A-Za-z0-9]+$`)
+
+func (u UserID) String() string {
+	return string(u)
+}
+
+func (u UserID) IsValid() bool {
+	return userIDRegex.MatchString(u.String())
+}
 
 func NewUserID(s string) (UserID, error) {
 	err := validation.Get().Var(s, "required,userID")
@@ -38,10 +50,6 @@ func MustNewRandUserID() UserID {
 		panic(fmt.Sprintf("MustNewRandUserID: %v", err))
 	}
 	return id
-}
-
-func (u UserID) String() string {
-	return string(u)
 }
 
 type Email string

@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"eaglebank/internal/users"
 	"errors"
 	"fmt"
 	"math/rand/v2"
@@ -38,7 +39,7 @@ type AccountNumber string
 var accountNumberRegex = regexp.MustCompile(`^01\d{6}$`)
 
 func (a AccountNumber) IsValid() bool {
-	return accountNumberRegex.MatchString(string(a))
+	return accountNumberRegex.MatchString(a.String())
 }
 
 func (a AccountNumber) String() string {
@@ -104,6 +105,7 @@ const balanceMax float64 = 10000
 const balanceMin float64 = 0
 
 type BankAccount struct {
+	UserID           users.UserID
 	AccountNumber    AccountNumber
 	SortCode         SortCode
 	Name             string
@@ -119,6 +121,9 @@ func (ba *BankAccount) IsValid() bool {
 		return false
 	}
 	if ba.balance < balanceMin || ba.balance > balanceMax {
+		return false
+	}
+	if !ba.UserID.IsValid() {
 		return false
 	}
 	if !ba.AccountNumber.IsValid() {
@@ -156,9 +161,10 @@ func (ba *BankAccount) Deposit(amt float64) error {
 	return nil
 }
 
-func NewBankAccount(acctNum AccountNumber, sortCode SortCode, name string, acctType AccountType, curr Currency) (*BankAccount, error) {
+func NewBankAccount(userID users.UserID, acctNum AccountNumber, sortCode SortCode, name string, acctType AccountType, curr Currency) (BankAccount, error) {
 	now := time.Now()
 	acct := BankAccount{
+		UserID:           userID,
 		AccountNumber:    acctNum,
 		SortCode:         sortCode,
 		Name:             name,
@@ -169,12 +175,13 @@ func NewBankAccount(acctNum AccountNumber, sortCode SortCode, name string, acctT
 		UpdatedTimestamp: now,
 	}
 	if !acct.IsValid() {
-		return &BankAccount{}, fmt.Errorf("invalid bank account %+v", acct)
+		return BankAccount{}, fmt.Errorf("invalid bank account %+v", acct)
 	}
-	return &acct, nil
+	return acct, nil
 }
 
 type CreateAccountRequest struct {
+	UserID      users.UserID
 	Name        string
 	AccountType AccountType
 }
@@ -183,14 +190,18 @@ func (r CreateAccountRequest) IsValid() bool {
 	if r.Name == "" {
 		return false
 	}
+	if !r.UserID.IsValid() {
+		return false
+	}
 	if !r.AccountType.IsValid() {
 		return false
 	}
 	return true
 }
 
-func NewCreateAccountRequest(name string, acctType AccountType) (CreateAccountRequest, error) {
+func NewCreateAccountRequest(userID users.UserID, name string, acctType AccountType) (CreateAccountRequest, error) {
 	req := CreateAccountRequest{
+		UserID:      userID,
 		Name:        name,
 		AccountType: acctType,
 	}

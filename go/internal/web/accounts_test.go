@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"eaglebank/internal/accounts"
 	"eaglebank/internal/accounts/adapters"
+	"eaglebank/internal/users"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAccounts(t *testing.T) {
+func TestCreateAccount(t *testing.T) {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	acctStore := adapters.NewInMemoryAccountStore()
 	acctSvc := accounts.NewAccountService(acctStore)
@@ -93,6 +94,77 @@ func TestAccounts(t *testing.T) {
 	})
 }
 
+func TestListAccounts(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	acctStore := adapters.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+	srv := NewServer(ServerArgs{Logger: logger, AcctSvc: acctSvc})
+
+	token := login(t, srv, "usr-testuser")
+
+	reqObj := CreateBankAccountRequest{
+		Name:        "Mr Foo",
+		AccountType: accounts.PersonalAcct.String(),
+	}
+	req := createAccountRequest(t, reqObj, token)
+	rr := httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var acct1 BankAccountResponse
+	err := json.NewDecoder(rr.Body).Decode(&acct1)
+	require.NoError(t, err)
+
+	req = createAccountRequest(t, reqObj, token)
+	rr = httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var acct2 BankAccountResponse
+	err = json.NewDecoder(rr.Body).Decode(&acct2)
+	require.NoError(t, err)
+
+	t.Run("GET from /v1/accounts", func(t *testing.T) {
+		t.Run("with required data should 200", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = listAccountsRequest(t, token)
+			srv.ServeHTTP(rr, req)
+
+			var resp ListBankAccountsResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, rr.Code)
+			assert.Len(t, resp.Accounts, 2)
+			assert.Contains(t, resp.Accounts, acct1)
+			assert.Contains(t, resp.Accounts, acct2)
+		})
+		t.Run("without authentication should 401", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = listAccountsRequest(t)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		})
+		t.Run("unexpected error should 500", func(t *testing.T) {
+			errAcctSvc := newErroringAccountService(t)
+			errSrv := NewServer(ServerArgs{Logger: logger, AcctSvc: errAcctSvc})
+
+			rr = httptest.NewRecorder()
+			req = listAccountsRequest(t, token)
+			errSrv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		})
+	})
+}
+
 func createAccountRequest(t *testing.T, reqObj CreateBankAccountRequest, token ...string) *http.Request {
 	t.Helper()
 	by, err := json.Marshal(reqObj)
@@ -104,7 +176,20 @@ func createAccountRequest(t *testing.T, reqObj CreateBankAccountRequest, token .
 	return req
 }
 
+func listAccountsRequest(t *testing.T, token ...string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/accounts", nil)
+	if len(token) != 0 {
+		req.Header.Set("Authorization", "Bearer "+token[0])
+	}
+	return req
+}
+
 type erroringAccountService struct{}
+
+func (e erroringAccountService) ListAccounts(id users.UserID) ([]accounts.BankAccount, error) {
+	return nil, errors.New("some error")
+}
 
 func (e erroringAccountService) CreateAccount(req accounts.CreateAccountRequest) (*accounts.BankAccount, error) {
 	return nil, errors.New("some error")
