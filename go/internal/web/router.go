@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 )
 
 type ServerArgs struct {
@@ -30,7 +31,7 @@ func NewServer(args ServerArgs) http.Handler {
 	// protected routes
 	mux.HandleFunc("GET /v1/users/{userId}", authMiddleware(handleGetUser(args.UserSvc)))
 
-	mux.HandleFunc("POST /v1/accounts/", authMiddleware(handleCreateAccount(args.AcctSvc)))
+	mux.HandleFunc("POST /v1/accounts", authMiddleware(handleCreateAccount(args.AcctSvc)))
 
 	handler := panicMiddleware(args.Logger)(mux)
 	handler = loggingMiddleware(args.Logger)(handler)

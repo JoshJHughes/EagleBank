@@ -6,13 +6,14 @@ import (
 	"eaglebank/internal/accounts/adapters"
 	"encoding/json"
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAccounts(t *testing.T) {
@@ -96,7 +97,7 @@ func createAccountRequest(t *testing.T, reqObj CreateBankAccountRequest, token .
 	t.Helper()
 	by, err := json.Marshal(reqObj)
 	require.NoError(t, err)
-	req := httptest.NewRequest(http.MethodPost, "/v1/accounts/", bytes.NewBuffer(by))
+	req := httptest.NewRequest(http.MethodPost, "/v1/accounts", bytes.NewBuffer(by))
 	if len(token) != 0 {
 		req.Header.Set("Authorization", "Bearer "+token[0])
 	}
