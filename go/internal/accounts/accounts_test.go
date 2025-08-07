@@ -26,7 +26,7 @@ func TestAccountService(t *testing.T) {
 
 			retAcct, err := store.GetByAcctNum(acct.AccountNumber)
 			require.NoError(t, err)
-			assert.Equal(t, *acct, retAcct)
+			assert.Equal(t, acct, retAcct)
 		})
 		t.Run("should fail for invalid user", func(t *testing.T) {
 			req := accounts.CreateAccountRequest{
@@ -70,8 +70,8 @@ func TestAccountService(t *testing.T) {
 			accts, err := svc.ListAccounts(userID)
 			require.NoError(t, err)
 			assert.Len(t, accts, 2)
-			assert.Contains(t, accts, *acct1)
-			assert.Contains(t, accts, *acct2)
+			assert.Contains(t, accts, acct1)
+			assert.Contains(t, accts, acct2)
 		})
 		t.Run("should return empty list if user has no accounts", func(t *testing.T) {
 			userIDNoAccs := users.MustNewUserID("usr-1234")
@@ -86,6 +86,35 @@ func TestAccountService(t *testing.T) {
 			assert.Error(t, err)
 		})
 	})
+	t.Run("fetch account", func(t *testing.T) {
+		store := adapters.NewInMemoryAccountStore()
+		svc := accounts.NewAccountService(store)
+
+		userID := users.MustNewUserID("usr-123")
+		acct, err := svc.CreateAccount(accounts.CreateAccountRequest{
+			UserID:      userID,
+			Name:        "Mr Foo",
+			AccountType: accounts.PersonalAcct,
+		})
+		require.NoError(t, err)
+		t.Run("should fetch existing account", func(t *testing.T) {
+			gotAcct, err := svc.FetchAccount(acct.AccountNumber)
+			require.NoError(t, err)
+			assert.Equal(t, acct, gotAcct)
+		})
+		t.Run("should error if not found", func(t *testing.T) {
+			num, err := accounts.NewRandAccountNumber()
+			require.NoError(t, err)
+			_, err = svc.FetchAccount(num)
+			require.ErrorIs(t, err, accounts.ErrAccountNotFound)
+		})
+		t.Run("should error for any store error", func(t *testing.T) {
+			failStore := newFailingAccountStore(t)
+			failSvc := accounts.NewAccountService(failStore)
+			_, err = failSvc.FetchAccount(acct.AccountNumber)
+			assert.Error(t, err)
+		})
+	})
 }
 
 type failingAccountStore struct{}
@@ -95,8 +124,7 @@ func (f failingAccountStore) GetByUserID(userID users.UserID) ([]accounts.BankAc
 }
 
 func (f failingAccountStore) GetByAcctNum(acctNum accounts.AccountNumber) (accounts.BankAccount, error) {
-	//TODO implement me
-	panic("implement me")
+	return accounts.BankAccount{}, errors.New("some error")
 }
 
 func (f failingAccountStore) Put(acct accounts.BankAccount) error {

@@ -165,6 +165,110 @@ func TestListAccounts(t *testing.T) {
 	})
 }
 
+func TestFetchAccount(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	acctStore := adapters.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+	srv := NewServer(ServerArgs{Logger: logger, AcctSvc: acctSvc})
+
+	reqObj := CreateBankAccountRequest{
+		Name:        "Mr Foo",
+		AccountType: accounts.PersonalAcct.String(),
+	}
+	token1 := login(t, srv, "usr-testuser")
+	req := createAccountRequest(t, reqObj, token1)
+	rr := httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var acct1 BankAccountResponse
+	err := json.NewDecoder(rr.Body).Decode(&acct1)
+	require.NoError(t, err)
+
+	token2 := login(t, srv, "usr-testuser2")
+	req = createAccountRequest(t, reqObj, token2)
+	rr = httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+	require.Equal(t, http.StatusCreated, rr.Code)
+	var acct2 BankAccountResponse
+	err = json.NewDecoder(rr.Body).Decode(&acct2)
+	require.NoError(t, err)
+
+	t.Run("GET from /v1/accounts/{accountId}", func(t *testing.T) {
+		t.Run("with required data should 200", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchAccountRequest(t, acct1.AccountNumber, token1)
+			srv.ServeHTTP(rr, req)
+
+			var resp BankAccountResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, rr.Code)
+			assert.Equal(t, acct1, resp)
+		})
+		t.Run("without required data should 400", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchAccountRequest(t, "invalid-id", token1)
+			srv.ServeHTTP(rr, req)
+
+			var resp BadRequestErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, rr.Code)
+		})
+		t.Run("without authentication should 401", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchAccountRequest(t, acct1.AccountNumber)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		})
+		t.Run("forbidden should 403", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchAccountRequest(t, acct1.AccountNumber, token2)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusForbidden, rr.Code)
+		})
+		t.Run("not found should 404", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			randAcctNum, err := accounts.NewRandAccountNumber()
+			require.NoError(t, err)
+			req = fetchAccountRequest(t, randAcctNum.String(), token1)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, rr.Code)
+		})
+		t.Run("unexpected error should 500", func(t *testing.T) {
+			errAcctSvc := newErroringAccountService(t)
+			errSrv := NewServer(ServerArgs{Logger: logger, AcctSvc: errAcctSvc})
+
+			rr = httptest.NewRecorder()
+			req = fetchAccountRequest(t, acct1.AccountNumber, token1)
+			errSrv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		})
+	})
+}
+
 func createAccountRequest(t *testing.T, reqObj CreateBankAccountRequest, token ...string) *http.Request {
 	t.Helper()
 	by, err := json.Marshal(reqObj)
@@ -185,14 +289,27 @@ func listAccountsRequest(t *testing.T, token ...string) *http.Request {
 	return req
 }
 
+func fetchAccountRequest(t *testing.T, acctNum string, token ...string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/accounts/"+acctNum, nil)
+	if len(token) != 0 {
+		req.Header.Set("Authorization", "Bearer "+token[0])
+	}
+	return req
+}
+
 type erroringAccountService struct{}
+
+func (e erroringAccountService) FetchAccount(acctNum accounts.AccountNumber) (accounts.BankAccount, error) {
+	return accounts.BankAccount{}, errors.New("some error")
+}
 
 func (e erroringAccountService) ListAccounts(id users.UserID) ([]accounts.BankAccount, error) {
 	return nil, errors.New("some error")
 }
 
-func (e erroringAccountService) CreateAccount(req accounts.CreateAccountRequest) (*accounts.BankAccount, error) {
-	return nil, errors.New("some error")
+func (e erroringAccountService) CreateAccount(req accounts.CreateAccountRequest) (accounts.BankAccount, error) {
+	return accounts.BankAccount{}, errors.New("some error")
 }
 
 func newErroringAccountService(t *testing.T) erroringAccountService {

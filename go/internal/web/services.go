@@ -11,6 +11,7 @@ type UserService interface {
 }
 
 type AccountService interface {
-	CreateAccount(req accounts.CreateAccountRequest) (*accounts.BankAccount, error)
+	CreateAccount(req accounts.CreateAccountRequest) (accounts.BankAccount, error)
 	ListAccounts(id users.UserID) ([]accounts.BankAccount, error)
+	FetchAccount(acctNum accounts.AccountNumber) (accounts.BankAccount, error)
 }

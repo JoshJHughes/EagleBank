@@ -21,13 +21,13 @@ func NewAccountService(acctStore AccountStore) *AccountService {
 	return &AccountService{accountStore: acctStore}
 }
 
-func (svc *AccountService) CreateAccount(req CreateAccountRequest) (*BankAccount, error) {
+func (svc *AccountService) CreateAccount(req CreateAccountRequest) (BankAccount, error) {
 	if !req.IsValid() {
-		return nil, fmt.Errorf("invalid create account request %+v", req)
+		return BankAccount{}, fmt.Errorf("invalid create account request %+v", req)
 	}
 	acctNum, err := NewRandAccountNumber()
 	if err != nil {
-		return nil, fmt.Errorf("error generating account number %w", err)
+		return BankAccount{}, fmt.Errorf("error generating account number %w", err)
 	}
 	acct, err := NewBankAccount(
 		req.UserID,
@@ -38,13 +38,13 @@ func (svc *AccountService) CreateAccount(req CreateAccountRequest) (*BankAccount
 		GBP,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid bank account details")
+		return BankAccount{}, fmt.Errorf("invalid bank account details")
 	}
 	err = svc.accountStore.Put(acct)
 	if err != nil {
-		return nil, fmt.Errorf("error creating bank account %w", err)
+		return BankAccount{}, fmt.Errorf("error creating bank account %w", err)
 	}
-	return &acct, nil
+	return acct, nil
 }
 
 func (svc *AccountService) ListAccounts(id users.UserID) ([]BankAccount, error) {
@@ -56,4 +56,15 @@ func (svc *AccountService) ListAccounts(id users.UserID) ([]BankAccount, error) 
 		return nil, fmt.Errorf("error listing bank accounts %w", err)
 	}
 	return accts, nil
+}
+
+func (svc *AccountService) FetchAccount(acctNum AccountNumber) (BankAccount, error) {
+	acct, err := svc.accountStore.GetByAcctNum(acctNum)
+	if err != nil {
+		if errors.Is(err, ErrAccountNotFound) {
+			return BankAccount{}, err
+		}
+		return BankAccount{}, fmt.Errorf("error fetching bank account %w", err)
+	}
+	return acct, nil
 }

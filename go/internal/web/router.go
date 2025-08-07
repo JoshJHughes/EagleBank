@@ -33,6 +33,7 @@ func NewServer(args ServerArgs) http.Handler {
 
 	mux.HandleFunc("POST /v1/accounts", authMiddleware(handleCreateAccount(args.AcctSvc)))
 	mux.HandleFunc("GET /v1/accounts", authMiddleware(handleListAccounts(args.AcctSvc)))
+	mux.HandleFunc("GET /v1/accounts/{accountId}", authMiddleware(handleFetchAccount(args.AcctSvc)))
 
 	handler := panicMiddleware(args.Logger)(mux)
 	handler = loggingMiddleware(args.Logger)(handler)

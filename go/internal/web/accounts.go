@@ -5,6 +5,7 @@ import (
 	"eaglebank/internal/users"
 	"eaglebank/internal/validation"
 	"encoding/json"
+	"errors"
 	"net/http"
 )
 
@@ -34,7 +35,7 @@ func handleCreateAccount(svc AccountService) http.HandlerFunc {
 			writeErrorResponse(w, http.StatusInternalServerError, err)
 		}
 
-		resp := newBankAccountResponseFromDomain(*acct)
+		resp := newBankAccountResponseFromDomain(acct)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(resp)
@@ -55,6 +56,34 @@ func handleListAccounts(svc AccountService) http.HandlerFunc {
 		}
 
 		resp := ListBankAccountsResponse{Accounts: acctResps}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func handleFetchAccount(svc AccountService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		acctNum, err := accounts.NewAccountNumber(r.PathValue("accountId"))
+		if err != nil {
+			writeBadRequestErrorResponse(w, err)
+			return
+		}
+
+		acct, err := svc.FetchAccount(acctNum)
+		if err != nil {
+			if errors.Is(err, accounts.ErrAccountNotFound) {
+				writeErrorResponse(w, http.StatusNotFound, err)
+			}
+			writeErrorResponse(w, http.StatusInternalServerError, err)
+		}
+
+		userID := GetAuthenticatedUserID(r.Context())
+		if acct.UserID.String() != userID {
+			writeErrorResponse(w, http.StatusForbidden, errors.New("forbidden"))
+		}
+
+		resp := newBankAccountResponseFromDomain(acct)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(resp)
