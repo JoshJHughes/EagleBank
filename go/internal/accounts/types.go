@@ -116,7 +116,7 @@ type BankAccount struct {
 	UpdatedTimestamp time.Time
 }
 
-func (ba *BankAccount) IsValid() bool {
+func (ba BankAccount) IsValid() bool {
 	if ba.Name == "" {
 		return false
 	}
@@ -141,11 +141,11 @@ func (ba *BankAccount) IsValid() bool {
 	return true
 }
 
-func (ba *BankAccount) Balance() float64 {
+func (ba BankAccount) Balance() float64 {
 	return ba.balance
 }
 
-func (ba *BankAccount) Withdraw(amt float64) error {
+func (ba BankAccount) Withdraw(amt float64) error {
 	newBalance := ba.balance - amt
 	if newBalance < balanceMin {
 		return errors.New("account overdrawn")
@@ -153,7 +153,7 @@ func (ba *BankAccount) Withdraw(amt float64) error {
 	return nil
 }
 
-func (ba *BankAccount) Deposit(amt float64) error {
+func (ba BankAccount) Deposit(amt float64) error {
 	newBalance := ba.balance + amt
 	if newBalance > balanceMax {
 		return errors.New("account underdrawn")
