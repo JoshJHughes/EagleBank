@@ -106,3 +106,51 @@ func TestCreateTransaction(t *testing.T) {
 		assert.Equal(t, preDepositAcct, postDepositAcct)
 	})
 }
+
+func TestListTransaction(t *testing.T) {
+	acctStore := adapters2.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+
+	tanStore := adapters.NewInMemoryTransactionStore()
+	tanSvc := transactions.NewTransactionService(tanStore, acctStore)
+
+	userID := users.MustNewUserID("usr-123")
+	acct, err := acctSvc.CreateAccount(accounts.CreateAccountRequest{
+		UserID:      userID,
+		Name:        "Mr Foo",
+		AccountType: accounts.PersonalAcct,
+	})
+	require.NoError(t, err)
+
+	tan1, err := tanSvc.CreateTransaction(transactions.CreateTransactionRequest{
+		AccountNumber: acct.AccountNumber,
+		UserID:        userID,
+		Amount:        100,
+		Currency:      accounts.GBP,
+		Type:          transactions.Deposit,
+	})
+	require.NoError(t, err)
+	tan2, err := tanSvc.CreateTransaction(transactions.CreateTransactionRequest{
+		AccountNumber: acct.AccountNumber,
+		UserID:        userID,
+		Amount:        100,
+		Currency:      accounts.GBP,
+		Type:          transactions.Deposit,
+	})
+	require.NoError(t, err)
+
+	t.Run("should list all accounts", func(t *testing.T) {
+		accts, err := tanSvc.ListTransactions(acct.AccountNumber)
+		require.NoError(t, err)
+		assert.Len(t, accts, 2)
+		assert.Contains(t, accts, tan1)
+		assert.Contains(t, accts, tan2)
+	})
+	t.Run("should return empty list if user has no accounts", func(t *testing.T) {
+		acctNumNoTans, err := accounts.NewRandAccountNumber()
+		require.NoError(t, err)
+		accts, err := tanSvc.ListTransactions(acctNumNoTans)
+		require.NoError(t, err)
+		assert.Empty(t, accts)
+	})
+}

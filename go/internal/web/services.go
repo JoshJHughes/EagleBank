@@ -19,4 +19,5 @@ type AccountService interface {
 
 type TransactionService interface {
 	CreateTransaction(req transactions.CreateTransactionRequest) (transactions.Transaction, error)
+	ListTransactions(acctNum accounts.AccountNumber) ([]transactions.Transaction, error)
 }

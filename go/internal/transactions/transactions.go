@@ -26,7 +26,7 @@ func NewTransactionService(tanStore TransactionStore, acctStore accountStore) *T
 	return &TransactionService{transactionStore: tanStore, acctStore: acctStore}
 }
 
-func (svc TransactionService) CreateTransaction(req CreateTransactionRequest) (Transaction, error) {
+func (svc *TransactionService) CreateTransaction(req CreateTransactionRequest) (Transaction, error) {
 	acct, err := svc.acctStore.GetByAcctNum(req.AccountNumber)
 	if err != nil {
 		if errors.Is(err, accounts.ErrAccountNotFound) {
@@ -63,4 +63,15 @@ func (svc TransactionService) CreateTransaction(req CreateTransactionRequest) (T
 		return Transaction{}, fmt.Errorf("error processing transaction %w", err)
 	}
 	return tan, nil
+}
+
+func (svc *TransactionService) ListTransactions(acctNum accounts.AccountNumber) ([]Transaction, error) {
+	tans, err := svc.transactionStore.GetByAccountNumber(acctNum)
+	if err != nil {
+		if errors.Is(err, ErrTransactionNotFound) {
+			return []Transaction{}, nil
+		}
+		return nil, fmt.Errorf("error listing transactions %w", err)
+	}
+	return tans, nil
 }
