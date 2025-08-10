@@ -13,14 +13,14 @@ import (
 
 type TransactionType string
 
-const deposit TransactionType = "deposit"
-const withdrawal TransactionType = "withdrawal"
+const Deposit TransactionType = "deposit"
+const Withdrawal TransactionType = "withdrawal"
 
 func (t TransactionType) String() string { return string(t) }
 
 func (t TransactionType) IsValid() bool {
 	switch t {
-	case deposit, withdrawal:
+	case Deposit, Withdrawal:
 		return true
 	default:
 		return false
@@ -29,7 +29,7 @@ func (t TransactionType) IsValid() bool {
 
 type TransactionID string
 
-var transactionIDRegex = regexp.MustCompile(`^tan-[A-Za-z0-9]$`)
+var transactionIDRegex = regexp.MustCompile(`^tan-[A-Za-z0-9]+$`)
 
 func (id TransactionID) String() string { return string(id) }
 
@@ -49,12 +49,12 @@ func NewRandTransactionID() (TransactionID, error) {
 	return NewTransactionID("tan-" + clean)
 }
 
-const transactionMax float64 = 10000
-const transactionMin float64 = 0
+const TransactionMax float64 = 10000
+const TransactionMin float64 = 0
 
 type Transaction struct {
 	ID               TransactionID
-	AcctNum          accounts.AccountNumber
+	AccountNumber    accounts.AccountNumber
 	UserID           users.UserID
 	Amount           float64
 	Currency         accounts.Currency
@@ -64,13 +64,13 @@ type Transaction struct {
 }
 
 func (t Transaction) IsValid() bool {
-	if t.Amount < transactionMin || t.Amount > transactionMax {
+	if t.Amount < TransactionMin || t.Amount > TransactionMax {
 		return false
 	}
 	if !t.ID.IsValid() {
 		return false
 	}
-	if !t.AcctNum.IsValid() {
+	if !t.AccountNumber.IsValid() {
 		return false
 	}
 	if !t.UserID.IsValid() {
@@ -85,15 +85,16 @@ func (t Transaction) IsValid() bool {
 	return true
 }
 
-func NewTransaction(id TransactionID, amt float64, curr accounts.Currency, tanType TransactionType, ref string, userID users.UserID) (Transaction, error) {
+func NewTransaction(id TransactionID, acctNum accounts.AccountNumber, userID users.UserID, amt float64, curr accounts.Currency, tanType TransactionType, ref string) (Transaction, error) {
 	now := time.Now()
 	tan := Transaction{
 		ID:               id,
+		AccountNumber:    acctNum,
+		UserID:           userID,
 		Amount:           amt,
 		Currency:         curr,
 		Type:             tanType,
 		Reference:        ref,
-		UserID:           userID,
 		CreatedTimestamp: now,
 	}
 	if !tan.IsValid() {
@@ -112,7 +113,7 @@ type CreateTransactionRequest struct {
 }
 
 func (r CreateTransactionRequest) IsValid() bool {
-	if r.Amount < transactionMin || r.Amount > transactionMax {
+	if r.Amount < TransactionMin || r.Amount > TransactionMax {
 		return false
 	}
 	if r.AccountNumber.IsValid() {
