@@ -2,11 +2,13 @@ package web
 
 import (
 	"eaglebank/internal/accounts"
+	"eaglebank/internal/transactions"
 	"eaglebank/internal/users"
 	"eaglebank/internal/validation"
 	"errors"
-	"github.com/go-playground/validator/v10"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type Address struct {
@@ -100,6 +102,23 @@ type TransactionResponse struct {
 	Reference        *string   `json:"reference,omitempty"`
 	UserID           *string   `json:"userId,omitempty" validate:"omitempty,userID"`
 	CreatedTimestamp time.Time `json:"createdTimestamp" validate:"required"`
+}
+
+func newTransactionResponseFromDomain(tan transactions.Transaction) TransactionResponse {
+	userID := tan.UserID.String()
+	resp := TransactionResponse{
+		ID:               tan.ID.String(),
+		Amount:           tan.Amount,
+		Currency:         tan.Currency.String(),
+		Type:             tan.Type.String(),
+		UserID:           &userID,
+		CreatedTimestamp: tan.CreatedTimestamp,
+	}
+	if tan.Reference != "" {
+		ref := &tan.Reference
+		resp.Reference = ref
+	}
+	return resp
 }
 
 type ListTransactionsResponse struct {

@@ -116,10 +116,10 @@ func (r CreateTransactionRequest) IsValid() bool {
 	if r.Amount < TransactionMin || r.Amount > TransactionMax {
 		return false
 	}
-	if r.AccountNumber.IsValid() {
+	if !r.AccountNumber.IsValid() {
 		return false
 	}
-	if r.UserID.IsValid() {
+	if !r.UserID.IsValid() {
 		return false
 	}
 	if !r.Currency.IsValid() {

@@ -33,6 +33,7 @@ func handleCreateAccount(svc AccountService) http.HandlerFunc {
 		acct, err := svc.CreateAccount(domReq)
 		if err != nil {
 			writeErrorResponse(w, http.StatusInternalServerError, err)
+			return
 		}
 
 		resp := newBankAccountResponseFromDomain(acct)
