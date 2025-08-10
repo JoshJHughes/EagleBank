@@ -193,7 +193,7 @@ func TestFetchAccount(t *testing.T) {
 	err = json.NewDecoder(rr.Body).Decode(&acct2)
 	require.NoError(t, err)
 
-	t.Run("GET from /v1/accounts/{accountId}", func(t *testing.T) {
+	t.Run("GET from /v1/accounts/{accountNumber}", func(t *testing.T) {
 		t.Run("with required data should 200", func(t *testing.T) {
 			rr = httptest.NewRecorder()
 			req = fetchAccountRequest(t, acct1.AccountNumber, token1)

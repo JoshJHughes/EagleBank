@@ -75,3 +75,18 @@ func (svc *TransactionService) ListTransactions(acctNum accounts.AccountNumber) 
 	}
 	return tans, nil
 }
+
+func (svc *TransactionService) FetchTransaction(acctNum accounts.AccountNumber, tanID TransactionID) (Transaction, error) {
+	tan, err := svc.transactionStore.GetByTransactionID(tanID)
+	if err != nil {
+		if errors.Is(err, ErrTransactionNotFound) {
+			return Transaction{}, err
+		}
+		return Transaction{}, fmt.Errorf("error fetching transaction %w", err)
+	}
+
+	if tan.AccountNumber != acctNum {
+		return Transaction{}, ErrTransactionNotFound
+	}
+	return tan, nil
+}

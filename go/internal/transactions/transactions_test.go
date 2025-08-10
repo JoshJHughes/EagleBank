@@ -154,3 +154,55 @@ func TestListTransaction(t *testing.T) {
 		assert.Empty(t, accts)
 	})
 }
+
+func TestFetchTransaction(t *testing.T) {
+	acctStore := adapters2.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+
+	tanStore := adapters.NewInMemoryTransactionStore()
+	tanSvc := transactions.NewTransactionService(tanStore, acctStore)
+
+	userID := users.MustNewUserID("usr-123")
+	acct, err := acctSvc.CreateAccount(accounts.CreateAccountRequest{
+		UserID:      userID,
+		Name:        "Mr Foo",
+		AccountType: accounts.PersonalAcct,
+	})
+	require.NoError(t, err)
+
+	tan1, err := tanSvc.CreateTransaction(transactions.CreateTransactionRequest{
+		AccountNumber: acct.AccountNumber,
+		UserID:        userID,
+		Amount:        100,
+		Currency:      accounts.GBP,
+		Type:          transactions.Deposit,
+	})
+	require.NoError(t, err)
+	t.Run("should fetch existing transaction", func(t *testing.T) {
+		gotTan, err := tanSvc.FetchTransaction(tan1.AccountNumber, tan1.ID)
+		require.NoError(t, err)
+		assert.Equal(t, tan1, gotTan)
+	})
+	t.Run("should error if account not found", func(t *testing.T) {
+		_, err := tanSvc.FetchTransaction("01111111", tan1.ID)
+		assert.ErrorIs(t, err, transactions.ErrTransactionNotFound)
+	})
+	t.Run("should error if transaction not found", func(t *testing.T) {
+		notFoundTanID, err := transactions.NewRandTransactionID()
+		require.NoError(t, err)
+		_, err = tanSvc.FetchTransaction(tan1.AccountNumber, notFoundTanID)
+		assert.ErrorIs(t, err, transactions.ErrTransactionNotFound)
+	})
+	t.Run("should error if transaction not under specified account", func(t *testing.T) {
+		otherUserID := users.MustNewUserID("usr-1234")
+		otherAcct, err := acctSvc.CreateAccount(accounts.CreateAccountRequest{
+			UserID:      otherUserID,
+			Name:        "Mr Foo 2",
+			AccountType: accounts.PersonalAcct,
+		})
+		require.NoError(t, err)
+
+		_, err = tanSvc.FetchTransaction(otherAcct.AccountNumber, tan1.ID)
+		assert.ErrorIs(t, err, transactions.ErrTransactionNotFound)
+	})
+}

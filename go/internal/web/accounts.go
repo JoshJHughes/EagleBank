@@ -65,7 +65,7 @@ func handleListAccounts(svc AccountService) http.HandlerFunc {
 
 func handleFetchAccount(svc AccountService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		acctNum, err := accounts.NewAccountNumber(r.PathValue("accountId"))
+		acctNum, err := accounts.NewAccountNumber(r.PathValue("accountNumber"))
 		if err != nil {
 			writeBadRequestErrorResponse(w, err)
 			return

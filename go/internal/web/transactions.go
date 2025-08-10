@@ -23,7 +23,7 @@ func handleCreateTransaction(tanSvc TransactionService, acctSvc AccountService) 
 			return
 		}
 
-		acct, err := checkTransactionAuth(w, r, acctSvc)
+		acct, err := checkTransactionAccountAuth(w, r, acctSvc)
 		if err != nil {
 			return
 		}
@@ -57,7 +57,7 @@ func handleCreateTransaction(tanSvc TransactionService, acctSvc AccountService) 
 
 func handleListTransactions(svc TransactionService, acctSvc AccountService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		acct, err := checkTransactionAuth(w, r, acctSvc)
+		acct, err := checkTransactionAccountAuth(w, r, acctSvc)
 		if err != nil {
 			return
 		}
@@ -79,8 +79,37 @@ func handleListTransactions(svc TransactionService, acctSvc AccountService) http
 	}
 }
 
-func checkTransactionAuth(w http.ResponseWriter, r *http.Request, acctSvc AccountService) (accounts.BankAccount, error) {
-	acctNum, err := accounts.NewAccountNumber(r.PathValue("accountId"))
+func handleFetchTransaction(svc TransactionService, acctSvc AccountService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tanID, err := transactions.NewTransactionID(r.PathValue("transactionId"))
+		if err != nil {
+			writeBadRequestErrorResponse(w, err)
+			return
+		}
+
+		acct, err := checkTransactionAccountAuth(w, r, acctSvc)
+		if err != nil {
+			return
+		}
+
+		tan, err := svc.FetchTransaction(acct.AccountNumber, tanID)
+		if err != nil {
+			if errors.Is(err, transactions.ErrTransactionNotFound) {
+				writeErrorResponse(w, http.StatusNotFound, err)
+			}
+			writeErrorResponse(w, http.StatusInternalServerError, err)
+		}
+
+		resp := newTransactionResponseFromDomain(tan)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func checkTransactionAccountAuth(w http.ResponseWriter, r *http.Request, acctSvc AccountService) (accounts.BankAccount, error) {
+	acctNum, err := accounts.NewAccountNumber(r.PathValue("accountNumber"))
 	if err != nil {
 		writeBadRequestErrorResponse(w, err)
 		return accounts.BankAccount{}, err

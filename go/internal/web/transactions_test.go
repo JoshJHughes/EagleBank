@@ -28,7 +28,7 @@ func TestCreateTransaction(t *testing.T) {
 
 	token := login(t, srv, "usr-testuser")
 
-	t.Run("POST to /v1/accounts/{accountId}/transactions", func(t *testing.T) {
+	t.Run("POST to /v1/accounts/{accountNumber}/transactions", func(t *testing.T) {
 		validAcct := mustCreateAccount(t, token, srv)
 		t.Run("valid deposit request should 201", func(t *testing.T) {
 			rr := httptest.NewRecorder()
@@ -208,7 +208,7 @@ func TestListTransactions(t *testing.T) {
 	err = json.NewDecoder(rr.Body).Decode(&tan2)
 	require.NoError(t, err)
 
-	t.Run("GET from /v1/accounts/{accountId}/transactions", func(t *testing.T) {
+	t.Run("GET from /v1/accounts/{accountNumber}/transactions", func(t *testing.T) {
 		t.Run("with required data should 200", func(t *testing.T) {
 			rr = httptest.NewRecorder()
 			req = listTransactionRequest(t, validAcct.AccountNumber, token)
@@ -286,6 +286,133 @@ func TestListTransactions(t *testing.T) {
 	})
 }
 
+func TestFetchTransaction(t *testing.T) {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	acctStore := adapters.NewInMemoryAccountStore()
+	acctSvc := accounts.NewAccountService(acctStore)
+	tanStore := adapters2.NewInMemoryTransactionStore()
+	tanSvc := transactions.NewTransactionService(tanStore, acctStore)
+	srv := NewServer(ServerArgs{Logger: logger, TanSvc: tanSvc, AcctSvc: acctSvc})
+
+	token := login(t, srv, "usr-testuser")
+
+	validAcct := mustCreateAccount(t, token, srv)
+
+	reqObj := CreateTransactionRequest{
+		Amount:   100,
+		Currency: accounts.GBP.String(),
+		Type:     transactions.Deposit.String(),
+	}
+	req := createTransactionRequest(t, reqObj, validAcct.AccountNumber, token)
+	rr := httptest.NewRecorder()
+	srv.ServeHTTP(rr, req)
+	var tan1 TransactionResponse
+	err := json.NewDecoder(rr.Body).Decode(&tan1)
+	require.NoError(t, err)
+
+	t.Run("GET from /v1/accounts/{accountNumber}/transactions/{transactionId}", func(t *testing.T) {
+		t.Run("with required data should 200", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct.AccountNumber, tan1.ID, token)
+			srv.ServeHTTP(rr, req)
+
+			var resp TransactionResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, rr.Code)
+			assert.Equal(t, tan1, resp)
+		})
+		t.Run("invalid request should 400", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, "invalid-acct-num", tan1.ID, token)
+			srv.ServeHTTP(rr, req)
+
+			var resp BadRequestErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusBadRequest, rr.Code)
+		})
+		t.Run("without authentication should 401", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct.AccountNumber, tan1.ID)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		})
+		t.Run("forbidden should 403", func(t *testing.T) {
+			forbiddenToken := login(t, srv, "usr-forbiddenuser")
+
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct.AccountNumber, tan1.ID, forbiddenToken)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusForbidden, rr.Code)
+		})
+		t.Run("non-existent account should 404", func(t *testing.T) {
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, "01111111", tan1.ID, token)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, rr.Code)
+		})
+		t.Run("non-existent transaction should 404", func(t *testing.T) {
+			fakeID, err := transactions.NewRandTransactionID()
+			require.NoError(t, err)
+
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct.AccountNumber, fakeID.String(), token)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, rr.Code)
+		})
+		t.Run("account number does not match transaction should 404", func(t *testing.T) {
+			validAcct2 := mustCreateAccount(t, token, srv)
+
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct2.AccountNumber, tan1.ID, token)
+			srv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusNotFound, rr.Code)
+		})
+		t.Run("unexpected error should 500", func(t *testing.T) {
+			errTanSvc := newErroringTransactionService(t)
+			errSrv := NewServer(ServerArgs{Logger: logger, TanSvc: errTanSvc, AcctSvc: acctSvc})
+
+			rr = httptest.NewRecorder()
+			req = fetchTransactionRequest(t, validAcct.AccountNumber, tan1.ID, token)
+			errSrv.ServeHTTP(rr, req)
+
+			var resp ErrorResponse
+			err = json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		})
+	})
+}
+
 func createTransactionRequest(t *testing.T, reqObj CreateTransactionRequest, acctNum string, token ...string) *http.Request {
 	t.Helper()
 	by, err := json.Marshal(reqObj)
@@ -300,6 +427,15 @@ func createTransactionRequest(t *testing.T, reqObj CreateTransactionRequest, acc
 func listTransactionRequest(t *testing.T, acctNum string, token ...string) *http.Request {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/accounts/"+acctNum+"/transactions", nil)
+	if len(token) != 0 {
+		req.Header.Set("Authorization", "Bearer "+token[0])
+	}
+	return req
+}
+
+func fetchTransactionRequest(t *testing.T, acctNum, tanID string, token ...string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/accounts/"+acctNum+"/transactions/"+tanID, nil)
 	if len(token) != 0 {
 		req.Header.Set("Authorization", "Bearer "+token[0])
 	}
@@ -323,6 +459,10 @@ func mustCreateAccount(t *testing.T, token string, srv http.Handler) BankAccount
 }
 
 type erroringTransactionService struct{}
+
+func (e erroringTransactionService) FetchTransaction(acctNum accounts.AccountNumber, tanID transactions.TransactionID) (transactions.Transaction, error) {
+	return transactions.Transaction{}, errors.New("some error")
+}
 
 func (e erroringTransactionService) ListTransactions(acctNum accounts.AccountNumber) ([]transactions.Transaction, error) {
 	return []transactions.Transaction{}, errors.New("some error")

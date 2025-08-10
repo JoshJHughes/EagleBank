@@ -3,6 +3,8 @@ package main
 import (
 	"eaglebank/internal/accounts"
 	adapters2 "eaglebank/internal/accounts/adapters"
+	"eaglebank/internal/transactions"
+	adapters3 "eaglebank/internal/transactions/adapters"
 	"eaglebank/internal/users"
 	"eaglebank/internal/users/adapters"
 	"eaglebank/internal/web"
@@ -22,10 +24,14 @@ func main() {
 	acctStore := adapters2.NewInMemoryAccountStore()
 	acctSvc := accounts.NewAccountService(acctStore)
 
+	tanStore := adapters3.NewInMemoryTransactionStore()
+	tanSvc := transactions.NewTransactionService(tanStore, acctStore)
+
 	srv := web.NewServer(web.ServerArgs{
 		Logger:  logger,
 		UserSvc: usrSvc,
 		AcctSvc: acctSvc,
+		TanSvc:  tanSvc,
 	})
 
 	port := "8080"
