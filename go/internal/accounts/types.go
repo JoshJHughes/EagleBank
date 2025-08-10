@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"eaglebank/internal/users"
-	"errors"
 	"fmt"
 	"math/rand/v2"
 	"regexp"
@@ -101,8 +100,8 @@ func NewCurrency(s string) (Currency, error) {
 	return currency, nil
 }
 
-const balanceMax float64 = 10000
-const balanceMin float64 = 0
+const BalanceMax float64 = 10000
+const BalanceMin float64 = 0
 
 type BankAccount struct {
 	UserID           users.UserID
@@ -120,7 +119,7 @@ func (ba BankAccount) IsValid() bool {
 	if ba.Name == "" {
 		return false
 	}
-	if ba.balance < balanceMin || ba.balance > balanceMax {
+	if ba.balance < BalanceMin || ba.balance > BalanceMax {
 		return false
 	}
 	if !ba.UserID.IsValid() {
@@ -145,20 +144,22 @@ func (ba BankAccount) Balance() float64 {
 	return ba.balance
 }
 
-func (ba BankAccount) Withdraw(amt float64) error {
+func (ba BankAccount) Withdraw(amt float64) (BankAccount, error) {
 	newBalance := ba.balance - amt
-	if newBalance < balanceMin {
-		return errors.New("account overdrawn")
+	if newBalance < BalanceMin {
+		return BankAccount{}, ErrInsufficientFunds
 	}
-	return nil
+	ba.balance = newBalance
+	return ba, nil
 }
 
-func (ba BankAccount) Deposit(amt float64) error {
+func (ba BankAccount) Deposit(amt float64) (BankAccount, error) {
 	newBalance := ba.balance + amt
-	if newBalance > balanceMax {
-		return errors.New("account underdrawn")
+	if newBalance > BalanceMax {
+		return BankAccount{}, ErrTooManyFunds
 	}
-	return nil
+	ba.balance = newBalance
+	return ba, nil
 }
 
 func NewBankAccount(userID users.UserID, acctNum AccountNumber, sortCode SortCode, name string, acctType AccountType, curr Currency) (BankAccount, error) {
